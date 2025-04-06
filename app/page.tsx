@@ -43,58 +43,65 @@ export default function Home() {
    * - T wave (ventricular repolarization)
    * - Baseline wander and noise
    */
-  const generateSampleECGData = (baseHeartRate: number = 60): { data: ECGDataPoint[]; actualHR: number } => {
+  const generateSampleECGData = (baseHeartRate: number = 63): { data: ECGDataPoint[]; actualHR: number } => {
     const data: ECGDataPoint[] = [];
     const now = Date.now();
     const samplingRate = 250; // 250 Hz
     const duration = 5; // 5 seconds of data
     const totalPoints = duration * samplingRate;
     
-    // Base parameters with physiological variations
-    const actualHR = baseHeartRate + (Math.random() * 20 - 10); // ±10 BPM variation
-    const rrInterval = 60000 / actualHR;
+    // Fixed heart rate with minimal variation
+    const actualHR = baseHeartRate;
+    const rrInterval = 60000 / actualHR; // in milliseconds
     const pointsPerBeat = Math.floor(rrInterval * samplingRate / 1000);
     
-    // Waveform parameters with realistic variations
-    const pWaveAmplitude = 0.1 + Math.random() * 0.1;  // 0.1-0.2 mV
-    const qrsAmplitude = 1.0 + Math.random() * 0.5;    // 1.0-1.5 mV
-    const tWaveAmplitude = 0.2 + Math.random() * 0.1;  // 0.2-0.3 mV
+    // Fixed waveform parameters for consistency
+    const baseline = 0.0;  // baseline at 0 mV
+    const pWaveAmplitude = 0.15;  // 0.15 mV
+    const qWaveAmplitude = -0.1;  // -0.1 mV
+    const rWaveAmplitude = 1.2;   // 1.2 mV
+    const sWaveAmplitude = -0.3;  // -0.3 mV
+    const tWaveAmplitude = 0.25;  // 0.25 mV
     
     // Generate each point
     for (let i = 0; i < totalPoints; i++) {
-      const t = i / samplingRate;
       const beatPosition = (i % pointsPerBeat) / pointsPerBeat;
-      
-      let value = 0;
+      let value = baseline;
       
       // P wave (atrial depolarization)
-      if (beatPosition >= 0 && beatPosition < 0.15) {
-        const pTime = (beatPosition - 0.05) * 20;
+      if (beatPosition >= 0.05 && beatPosition < 0.15) {
+        const pTime = (beatPosition - 0.1) * 25;
         value += pWaveAmplitude * Math.exp(-pTime * pTime);
       }
       
-      // QRS complex (ventricular depolarization)
-      if (beatPosition >= 0.15 && beatPosition < 0.25) {
-        const qrsTime = (beatPosition - 0.2) * 50;
-        value += qrsAmplitude * Math.exp(-qrsTime * qrsTime);
+      // QRS complex
+      if (beatPosition >= 0.15 && beatPosition < 0.17) {
+        // Q wave
+        const qTime = (beatPosition - 0.16) * 50;
+        value += qWaveAmplitude * Math.exp(-qTime * qTime);
+      }
+      if (beatPosition >= 0.17 && beatPosition < 0.19) {
+        // R wave
+        const rTime = (beatPosition - 0.18) * 60;
+        value += rWaveAmplitude * Math.exp(-rTime * rTime);
+      }
+      if (beatPosition >= 0.19 && beatPosition < 0.22) {
+        // S wave
+        const sTime = (beatPosition - 0.2) * 45;
+        value += sWaveAmplitude * Math.exp(-sTime * sTime);
       }
       
       // T wave (ventricular repolarization)
-      if (beatPosition >= 0.25 && beatPosition < 0.45) {
-        const tTime = (beatPosition - 0.35) * 20;
+      if (beatPosition >= 0.25 && beatPosition < 0.35) {
+        const tTime = (beatPosition - 0.3) * 20;
         value += tWaveAmplitude * Math.exp(-tTime * tTime);
       }
       
-      // Add physiological noise
-      value += (Math.random() - 0.5) * 0.05;  // 50 µV noise
+      // Add minimal noise (reduced from previous version)
+      value += (Math.random() - 0.5) * 0.02;  // 20 µV noise
       
-      // Add occasional artifacts (1% chance)
-      if (Math.random() < 0.01) {
-        value += (Math.random() - 0.5) * 0.5;
-      }
-      
-      // Add baseline wander (respiratory variation)
-      value += Math.sin(t * 0.5) * 0.05;  // 0.5 Hz respiratory rate
+      // Add very subtle baseline wander
+      value += Math.sin(i * 0.001) * 0.01;  // 10 µV baseline wander
       
       data.push({
         timestamp: now + (i * 1000 / samplingRate),
@@ -107,7 +114,7 @@ export default function Home() {
 
   // Initialize baseline data
   useEffect(() => {
-    const { data } = generateSampleECGData(60);
+    const { data } = generateSampleECGData(63);
     setBaselineData(data);
   }, []);
 
@@ -134,9 +141,7 @@ export default function Home() {
     }
     
     const interval = setInterval(() => {
-      const { data: newData, actualHR } = generateSampleECGData(
-        60 + (Math.random() * 20 - 10) // Vary heart rate by ±10 BPM
-      );
+      const { data: newData, actualHR } = generateSampleECGData(63); // Fixed at 63 BPM
       setCurrentData((prev: ECGDataPoint[]) => [...prev.slice(-ANALYSIS_WINDOW_SIZE), ...newData]);
       setGeneratedHR(actualHR);
     }, 1000);
